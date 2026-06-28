@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
 
 entity testbench is
 end testbench;
@@ -39,16 +40,19 @@ begin
 		w_ula_op <= "0000";
 		w_sel    <= '1';
 		wait for PERIOD;
+		report "Apos ADDI x5,x0,6 -> w_ula = " & integer'image(to_integer(signed(w_ula)));
 
 		w_inst   <= "00000000010000000000001100010011"; -- ADDI x6, x0, 4
 		w_ula_op <= "0000";
 		w_sel    <= '1';
 		wait for PERIOD;
+		report "Apos ADDI x6,x0,4 -> w_ula = " & integer'image(to_integer(signed(w_ula)));
 
 		w_inst   <= "00000000011000101000001110110011"; -- ADD x7, x5, x6
 		w_ula_op <= "0000";
 		w_sel    <= '0';
 		wait for PERIOD;
+		report "Apos ADD x7,x5,x6 -> w_ula = " & integer'image(to_integer(signed(w_ula)));
 
 		STOP <= TRUE;
 		wait;

@@ -48,7 +48,7 @@ begin
 	port map(
 		i_inst(6 downto 0),
 		i_inst(14 downto 12),
-		i_inst(31 downto 25)(5),
+		i_inst(30),
 
 		reg_write,
 		alu_src,

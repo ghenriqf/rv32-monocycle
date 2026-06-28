@@ -1,23 +1,3 @@
--- =============================================================================
---  control.vhd  --  Unidade de Controle  --  RISC-V 32-bit Monociclo
--- =============================================================================
---
---  Entradas:  opcode (7 bits), funct3 (3 bits), funct7b5 (1 bit)
---  Saídas (sinais de controle):
---
---    reg_write  : habilita escrita no banco de registradores
---    alu_src    : 0 = usa rs2,  1 = usa imediato
---    mem_read   : habilita leitura da memória de dados
---    mem_write  : habilita escrita na memória de dados
---    mem_to_reg : 0 = resultado da ULA → rd,  1 = dado da mem → rd
---    branch     : instrução é um branch
---    jump       : instrução é JAL ou JALR
---    lui        : instrução é LUI  (rd = imm)
---    auipc      : instrução é AUIPC (rd = PC + imm)
---    jalr       : instrução é JALR (modifica cálculo do target)
---    alu_op     : código de operação para a ULA
--- =============================================================================
-
 library ieee;
 use ieee.std_logic_1164.all;
 
@@ -27,17 +7,17 @@ entity Control is
         funct3    : in  std_logic_vector(2 downto 0);
         funct7b5  : in  std_logic;
 
-        reg_write : out std_logic;
-        alu_src   : out std_logic;
-        mem_read  : out std_logic;
-        mem_write : out std_logic;
-        mem_to_reg: out std_logic;
-        branch    : out std_logic;
-        jump      : out std_logic;
-        lui       : out std_logic;
-        auipc     : out std_logic;
-        jalr      : out std_logic;
-        alu_op    : out std_logic_vector(3 downto 0)
+        reg_write  : out std_logic;
+        alu_src    : out std_logic;
+        mem_read   : out std_logic;
+        mem_write  : out std_logic;
+        mem_to_reg : out std_logic;
+        branch     : out std_logic;
+        jump       : out std_logic;
+        lui        : out std_logic;
+        auipc      : out std_logic;
+        jalr       : out std_logic;
+        alu_op     : out std_logic_vector(3 downto 0)
     );
 end Control;
 
@@ -45,18 +25,14 @@ architecture rtl of Control is
 begin
     process(opcode, funct3, funct7b5)
     begin
-        -- defaults: todos desligados
-        reg_write <= '0'; alu_src   <= '0'; mem_read  <= '0';
-        mem_write <= '0'; mem_to_reg<= '0'; branch    <= '0';
-        jump      <= '0'; lui       <= '0'; auipc     <= '0';
-        jalr      <= '0'; alu_op    <= "0000";
+        reg_write <= '0'; alu_src    <= '0'; mem_read  <= '0';
+        mem_write <= '0'; mem_to_reg <= '0'; branch    <= '0';
+        jump      <= '0'; lui        <= '0'; auipc     <= '0';
+        jalr      <= '0'; alu_op     <= "0000";
 
         case opcode is
 
-            -- ----------------------------------------------------------------
-            --  R-type  (add sub and or xor sll srl sra slt sltu)
-            -- ----------------------------------------------------------------
-            when "0110011" =>
+            when "0110011" => -- R-type
                 reg_write <= '1';
                 case funct3 is
                     when "000" =>
@@ -74,10 +50,7 @@ begin
                     when others => null;
                 end case;
 
-            -- ----------------------------------------------------------------
-            --  I-type aritmética (addi slti sltiu andi ori xori slli srli srai)
-            -- ----------------------------------------------------------------
-            when "0010011" =>
+            when "0010011" => -- I-type aritmética
                 reg_write <= '1'; alu_src <= '1';
                 case funct3 is
                     when "000" => alu_op <= "0000"; -- ADDI
@@ -93,58 +66,37 @@ begin
                     when others => null;
                 end case;
 
-            -- ----------------------------------------------------------------
-            --  Load  (lw — funct3=010)
-            -- ----------------------------------------------------------------
-            when "0000011" =>
+            when "0000011" => -- LW
                 reg_write  <= '1'; alu_src    <= '1';
                 mem_read   <= '1'; mem_to_reg <= '1';
-                alu_op <= "0000"; -- ADD (calcula endereço)
+                alu_op <= "0000";
 
-            -- ----------------------------------------------------------------
-            --  Store  (sw — funct3=010)
-            -- ----------------------------------------------------------------
-            when "0100011" =>
+            when "0100011" => -- SW
                 alu_src   <= '1'; mem_write <= '1';
-                alu_op <= "0000"; -- ADD (calcula endereço)
+                alu_op <= "0000";
 
-            -- ----------------------------------------------------------------
-            --  Branch  (beq bne blt bge bltu bgeu)
-            -- ----------------------------------------------------------------
-            when "1100011" =>
+            when "1100011" => -- Branch
                 branch <= '1';
                 case funct3 is
-                    when "000" => alu_op <= "0001"; -- BEQ  (SUB, testa zero)
-                    when "001" => alu_op <= "0001"; -- BNE  (SUB, testa ~zero)
-                    when "100" => alu_op <= "1000"; -- BLT  (SLT)
-                    when "101" => alu_op <= "1000"; -- BGE  (SLT invertido)
+                    when "000" => alu_op <= "0001"; -- BEQ
+                    when "001" => alu_op <= "0001"; -- BNE
+                    when "100" => alu_op <= "1000"; -- BLT
+                    when "101" => alu_op <= "1000"; -- BGE
                     when "110" => alu_op <= "1001"; -- BLTU
                     when "111" => alu_op <= "1001"; -- BGEU
                     when others => null;
                 end case;
 
-            -- ----------------------------------------------------------------
-            --  LUI
-            -- ----------------------------------------------------------------
-            when "0110111" =>
+            when "0110111" => -- LUI
                 reg_write <= '1'; lui <= '1';
 
-            -- ----------------------------------------------------------------
-            --  AUIPC
-            -- ----------------------------------------------------------------
-            when "0010111" =>
+            when "0010111" => -- AUIPC
                 reg_write <= '1'; auipc <= '1'; alu_op <= "0000";
 
-            -- ----------------------------------------------------------------
-            --  JAL
-            -- ----------------------------------------------------------------
-            when "1101111" =>
+            when "1101111" => -- JAL
                 reg_write <= '1'; jump <= '1';
 
-            -- ----------------------------------------------------------------
-            --  JALR
-            -- ----------------------------------------------------------------
-            when "1100111" =>
+            when "1100111" => -- JALR
                 reg_write <= '1'; jump <= '1'; jalr <= '1';
                 alu_src <= '1';   alu_op <= "0000";
 
